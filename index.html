@@ -1,0 +1,30 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="src/style.css">
+    <script defer src="src/main.js"></script>
+</head>
+<body>
+    <div class="state"></div>
+    <div class="devices">
+        <div class="audio-in">
+            <label for="devices-audio-input">Audio Input</label>
+            <select class="devices-audio-input" id="devices-audio-input"></select>
+        </div>
+        <div class="audio-out">
+            <label for="devices-audio-output">Audio Output</label>
+            <select class="devices-audio-output" id="devices-audio-output"></select>
+        </div>
+        <div class="video-in">
+            <label for="devices-video-input">Video Input</label>
+            <select class="devices-video-input" id="devices-video-input"></select>
+        </div>
+        <div class="stream-controls">
+            <button class="btn-stream-control">Start</button>
+        </div>
+        <video class="stream-player" controls autoplay></video>
+    </div>
+</body>
+</html>
