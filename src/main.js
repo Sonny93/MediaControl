@@ -64,14 +64,12 @@ class MediaControl {
             devices.forEach(device => {
                 if (device.kind === 'audioinput') {
                     this.config.devices.audioInputs.push(device);
-                    typeof callback === 'function' ? callback(device) : null;
                 } else if (device.kind === 'audiooutput') {
                     this.config.devices.audioOutputs.push(device);
-                    typeof callback === 'function' ? callback(device) : null;
                 } else if (device.kind === 'videoinput') {
                     this.config.devices.videoInputs.push(device);
-                    typeof callback === 'function' ? callback(device) : null;
-                } else { console.error(device.kind, 'not supported'); }
+                } else { return console.error(device.kind, 'not supported'); }
+                typeof callback === 'function' ? callback(device) : null;
             });
             console.log('MediaDevices', this.config.devices);
         }).catch(console.error);
@@ -141,7 +139,7 @@ selector.audioOutputs.addEventListener('change', event => config.constraintsUpda
 selector.videoInputs.addEventListener('change', event => config.constraintsUpdate(event.target.value, 'videoinput'));
 
 window.addEventListener('load', () => {
-    const mediaControl = new MediaControl();
+    const mediaControl = window._mediaControl = new MediaControl();
     mediaControl.init().then(() => {
         mediaControl.checkPermissions().then(() => mediaControl.showDevices(device => selector.append(device, device.kind))).catch(console.error);
         btnStream.addEventListener('click', () => {
