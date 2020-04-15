@@ -27,23 +27,20 @@ class MediaControl {
                 return resolve();
         });
     }
-    constraintsUpdate(deviceId = null, type = null, _sp = null) {
-        console.log(deviceId, type);
-        if (deviceId === null)
-            return console.error('DeviceId null', deviceId);
+    constraintsUpdate(constraint = null, type = null, sp = null) { // Stream Player => <video>/<audio>
+        console.log(constraint, type);
+        if (constraint === null)
+            return console.error('DeviceId null', constraint);
 
-        if (type === 'audioinput') {
-            this.config.constraints.audio = {
-                deviceId
-            }
-        } else if (type === 'audiooutput') {
-            this.config.speakerOut = deviceId;
-            _sp !== null ? _sp.setSinkId(this.config.speakerOut) : null;
-        } else if (type === 'videoinput') {
-            this.config.constraints.video = {
-                deviceId
-            }
-        } else { console.error(type, 'not recognized'); }
+        if (type === 'audioinput')
+            this.config.constraints.audio = constraint;
+        else if (type === 'audiooutput') {
+            this.config.speakerOut = constraint;
+            sp !== null ? sp.setSinkId(this.config.speakerOut) : null;
+        } else if (type === 'videoinput')
+            this.config.constraints.video = constraint;
+        else 
+            console.error(type, 'not recognized');
     }
     getStream() {
         return this.config.stream;
@@ -76,28 +73,33 @@ class MediaControl {
     }
     checkPermissions() {
         return new Promise((resolve, reject) => {
-            const periphs = [{ name: 'microphone', consName: 'audio', isGranted: null }, { name: 'camera', consName: 'video', isGranted: null }];
+            const periphs = [
+                { name: 'microphone', constraintName: 'audio', type: 'audioinput', constraintValue: true }, 
+                { name: 'camera', constraintName: 'video', type: 'videoinput', constraintValue: { 'width': 1920, 'height': 1080 } }
+            ];
             periphs.forEach((periph, index, array) => {
-                let { name, consName } = periph;
+                let { name, constraintName, constraintValue, type } = periph;
+
                 this.retrievePermissions(name).then(permissions => {
                     if (permissions.state === 'granted') {
-                        this.config.constraints[consName] = periph.isGranted = true;
-                        if (index === array.length - 1) return resolve(periphs);
+                        this.constraintsUpdate(constraintValue, type);
+                        if (index === array.length - 1) return resolve();
                     } else if (permissions.state === 'prompt') {
-                        const constraints = { audio: consName === 'audio' ? true : false, video: consName === 'video' ? true : false };
+                        const constraints = { audio: constraintName === 'audio' ? true : false, video: constraintName === 'video' ? true : false };
                         this.requestDevices(constraints).then(stream => {
                             stream.getTracks().forEach(track => track.stop());
-                            this.config.constraints[consName] = periph.isGranted = true;
-                            if (index === array.length - 1) return resolve(periphs);
+                            this.constraintsUpdate(constraintValue, type);
+                            if (index === array.length - 1) return resolve();
                         }).catch(error => {
                             console.error(error);
-                            this.config.constraints[consName] = periph.isGranted = false;
-                            if (index === array.length - 1) return resolve(periphs);
+                            this.constraintsUpdate(false, type);
+                            if (index === array.length - 1) return resolve();
                         });
                     } else {
-                        this.config.constraints[consName] = periph.isGranted = false;
+                        this.constraintsUpdate(false, type);
                     }
                 }).catch(error => {
+                    this.constraintsUpdate(false, type);
                     console.error(error);
                 });
             });
@@ -109,7 +111,8 @@ class MediaControl {
     retrieveDevices() {
         return new Promise((resolve, reject) => navigator.mediaDevices.enumerateDevices().then(devices => resolve(devices)).catch(error => reject(error)));
     }
-    requestDevices(constraints) {
+    requestDevices(constraints = null) {
+        constraints === null ? constraints = this.config.constraints : constraints;
         return new Promise((resolve, reject) => navigator.mediaDevices.getUserMedia(constraints).then(stream => resolve(stream)).catch(error => reject(error)));
     }
 }
@@ -134,26 +137,27 @@ const selector = {
         }
     }
 }
-selector.audioInputs.addEventListener('change', event => config.constraintsUpdate(event.target.value, 'audioinput'));
-selector.audioOutputs.addEventListener('change', event => config.constraintsUpdate(event.target.value, 'audiooutput', streamPlayer));
-selector.videoInputs.addEventListener('change', event => config.constraintsUpdate(event.target.value, 'videoinput'));
 
 window.addEventListener('load', () => {
     const mediaControl = window._mediaControl = new MediaControl();
     mediaControl.init().then(() => {
         mediaControl.checkPermissions().then(() => mediaControl.showDevices(device => selector.append(device, device.kind))).catch(console.error);
+        let isStreamStarted = false;
         btnStream.addEventListener('click', () => {
-            let isStreamStarted = mediaControl.getStream() !== null ? true : false;
             console.log(isStreamStarted);
             if (!isStreamStarted) {
                 isStreamStarted = true;
                 btnStream.textContent = 'Stop';
-                mediaControl.requestDevices(mediaControl.config.constraints).then(stream => streamPlayer.srcObject = mediaControl.setStream(stream)).catch(console.error);
+                mediaControl.requestDevices().then(stream => streamPlayer.srcObject = mediaControl.setStream(stream)).catch(console.error);
             } else {
                 isStreamStarted = false;
                 btnStream.textContent = 'Start';
-                if (mediaControl.config.stream !== null) mediaControl.stopStream();
+                mediaControl.stopStream();
             }
         });
     }).catch(console.error);
+
+    selector.audioInputs.addEventListener('change', event => mediaControl.constraintsUpdate(event.target.value, 'audioinput'));
+    selector.audioOutputs.addEventListener('change', event => mediaControl.constraintsUpdate(event.target.value, 'audiooutput', streamPlayer));
+    selector.videoInputs.addEventListener('change', event => mediaControl.constraintsUpdate(event.target.value, 'videoinput'));
 });

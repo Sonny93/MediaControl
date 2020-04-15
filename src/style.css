@@ -15,8 +15,8 @@ html, body {
 }
 
 div.devices {
-    height: auto;
     width: 100%;
+    flex: 1;
     display: flex;
     flex-direction: column;
 }
@@ -36,4 +36,8 @@ div.devices > div > select, div.devices > div > select > option {
     text-overflow: ellipsis;
     white-space: nowrap;
     overflow: hidden;
+}
+
+video.stream-player {
+    flex: 1;
 }
